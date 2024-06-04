@@ -1,0 +1,118 @@
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+public class MassSpec {
+	private Particle[] particles;
+	private double efield;
+	private double bfield;
+
+	public MassSpec(double e, double b, Particle[] particles) {
+		this.particles = particles;
+		efield = e;
+		bfield = b; // in - out +
+
+		JFrame frame = new JFrame();
+		frame.setTitle("Mass Spectrometry Simulation");
+		frame.setSize(1600, 1000);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		JPanel contentPane = new JPanel() {
+			protected void paintComponent(Graphics g) {
+				super.paintComponent(g);
+				
+				g.setColor(Color.gray);
+				Graphics2D g2 = (Graphics2D) g;
+				g2.setFont(new Font("Berlin Sans FB", Font.BOLD, 30));
+				
+				for (int r=40; r<1600; r+=150) {
+					for (int c=40; c<1000; c+=150) {
+						if (bfield < 0) {
+							g.drawString("X", r, c);
+						} else {
+							g2.setFont(new Font("Berlin Sans FB", Font.PLAIN, 30));
+							g.drawString("O", r, c);
+						}
+					}
+				}
+				
+				g.setColor(Color.black);
+				g.fillRect(1070, 0, 20, 1000);
+				g.setColor(Color.white);
+				g.fillRect(190, 250, 900, 50);
+				g.fillRect(190, 650, 900, 50);
+				
+				g.setColor(Color.black);
+				g2.setFont(new Font("Berlin Sans FB", Font.BOLD, 32));
+				
+				g.drawString("+   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +   +",
+						200, 280);
+				g.drawString(
+						"-   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -",
+						200, 680);
+				
+				for (Particle p:particles) 
+					p.paintComponent(g);
+			}
+		};
+
+		frame.setContentPane(contentPane);
+		
+		frame.setVisible(true);
+		
+		// Action loop
+		Thread animationThread = new Thread(new Runnable() {
+            public void run() {
+                while (true) {
+                	for (Particle p : particles) {
+                		double[] Fm = getFm(p.getCharge(), p.getV(), bfield);
+            			double Fe = p.getCharge() * efield;
+            			
+            			// Compute force based on where the particle is
+                		if (p.getX() < 190) {
+                			p.setF(new double[] {0,0});
+                		} else if (p.getX() < 1090) {
+                			p.setF(new double[] {Fm[0], Fm[1] + Fe});
+                		} else {
+							p.setF(new double[] {Fm[0], Fm[1]});
+                		}
+                        p.move();
+                    }
+                    contentPane.repaint();
+                    sleep(10); // Speed of animation
+                }
+            }
+        });
+        animationThread.start();
+	}
+
+	public static void main(String[] args) {
+		// x y v m q c
+		Particle p1 = new Particle(100, 450, new double[] {5,0}, 3, .1, Color.red);
+		Particle p2 = new Particle(100, 450, new double[] {5,0}, 2.5, .1, Color.green);
+		Particle p3 = new Particle(100, 450, new double[] {5,0}, 2, .2/3, Color.blue);
+	
+		Particle particles[] = {p1, p2, p3};
+		
+//		Particle particles[] = {p1};
+		
+		MassSpec ms = new MassSpec(5, -1, particles);
+	}
+	
+	// Cross product
+	public static double[] getFm(double q, double[] v, double B) {
+		return new double[] {-q*v[1]*B, q*v[0]*B};
+	}
+	
+	public static void sleep(int time) {
+		try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+}
